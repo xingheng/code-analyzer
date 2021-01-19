@@ -9,7 +9,7 @@ def search_file_with_regex(regex, filepath):
 
     return []
 
-def search_target_in_project(regex, project_path, flat=True):
+def search_target_in_project(regex, project_path, flat=True, mapper=None):
     'Search regex in all the source file under the specified project path.'
     for dirpath, filename in find_source_files(project_path):
         filepath = os.path.join(dirpath, filename)
@@ -20,19 +20,44 @@ def search_target_in_project(regex, project_path, flat=True):
 
         if flat:
             for result in results:
-                yield (filepath, result)
+                yield (filepath, mapper(result))
         else:
-            yield (filepath, results)
+            yield (filepath, list(map(mapper, results) if mapper else results))
 
 def search_all_view_controllers(project_path, flat=True):
     'Search all the view controllers\' usages under the project.'
-    return search_target_in_project(r'SRT\w+ViewController', project_path, flat)
+    regex = r'@interface\s+SRT\w+ViewController.*:.*SRTBaseViewController'
+
+    def get_vc_name(definition):
+        units = re.split('@interface|:', definition)
+        return units[1].lstrip().rstrip()
+
+    return search_target_in_project(regex, project_path, flat, mapper=get_vc_name)
 
 def get_all_view_controllers(project_path):
     'Return all the unique view controller names under the project.'
     all_vcs = list()
 
     for _, results in search_all_view_controllers(project_path, flat=False):
+        all_vcs.extend(results)
+
+    return sorted(list(set(all_vcs)))
+
+def search_all_classes(project_path):
+    'Search all the class\' usages under the project.'
+    regex = r'@interface\s+\w+.*:.*\w+'
+
+    def get_class_name(definition):
+        units = re.split('@interface|:', definition)
+        return units[1].lstrip().rstrip()
+
+    return search_target_in_project(regex, project_path, False, mapper=get_class_name)
+
+def get_all_classes(project_path):
+    'Return all the unique class names under the project.'
+    all_vcs = list()
+
+    for _, results in search_all_classes(project_path):
         all_vcs.extend(results)
 
     return sorted(list(set(all_vcs)))
