@@ -67,14 +67,13 @@ def check_unused_import(project_path):
                     if run_xcode_build(workspace, scheme):
                         run_git_add_all(project_path)
                         logger.info(f'Validated successfully! Removed line "{r}" from file {filepath}.')
+                        found_unused = True
                     else:
                         run_git_discard(project_path)
                         logger.info(f'Validated failed! Revert line "{r}" from file {filepath}.')
 
                     logger.info('Let the cpu sleep a while. :)')
                     sleep(10)
-
-            found_unused = True
 
         if found_unused:
             run_git_commit(project_path, f'{symbol} usages.')

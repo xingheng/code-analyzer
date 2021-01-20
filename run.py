@@ -60,7 +60,7 @@ def run_xcode_build(workspace, scheme, output_dir=None):
         for buffer in read(master):
             foutput.write(buffer)
             # logger.info(buffer.decode('utf-8'))
-            print(buffer.decode('utf-8'), flush=True)
+            print(buffer.decode('utf-8', 'ignore'), flush=True, end='')
             # print('.', end='', flush=True)
 
         ret_code = p.poll()
