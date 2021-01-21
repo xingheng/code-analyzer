@@ -20,17 +20,30 @@ def check_unused_import(project_path):
     # Take the workspace prefix as default scheme name
     scheme, _ = os.path.splitext(workspace_name)
 
-    if not run_xcode_build(workspace, scheme):
+    def output(message):
+        # print(message, flush=True, end='')
+        print('.', flush=True, end='')
+
+    logger.info('Validating project environment before checking.')
+
+    if not run_xcode_build(workspace, scheme, output_handler=output):
         logger.error(f'Make sure the project {project_path} could build successfully before validating!')
         return
 
     whitelist_filenames = [
         'shiritan-Bridging-Header.h',
         'SRTConfig.h',
+        'shiritanTests.m',
+        'shiritan_Tests.m',
+        'shiritan_UITests.m',
     ]
 
-    for symbol in get_all_classes(project_path):
-        logger.info(f'Analyzing {symbol}')
+    all_symbols = get_all_classes(project_path)
+    unused_count, mischeck_count = 0, 0
+
+    for idx in range(len(all_symbols)):
+        symbol = all_symbols[idx]
+        logger.info(f'Analyzing {symbol} ({idx}/{len(all_symbols)})')
         found_unused = False
 
         changes = run_git_status(project_path)
@@ -64,19 +77,23 @@ def check_unused_import(project_path):
                 if remove_line_from_file(filepath, r):
                     logger.info('Validating...')
 
-                    if run_xcode_build(workspace, scheme):
+                    if run_xcode_build(workspace, scheme, output_handler=output):
                         run_git_add_all(project_path)
                         logger.info(f'Validated successfully! Removed line "{r}" from file {filepath}.')
                         found_unused = True
+                        unused_count += 1
                     else:
                         run_git_discard(project_path)
                         logger.info(f'Validated failed! Revert line "{r}" from file {filepath}.')
+                        mischeck_count += 1
 
                     logger.info('Let the cpu sleep a while. :)')
                     sleep(10)
 
         if found_unused:
             run_git_commit(project_path, f'{symbol} usages.')
+
+    logger.info(f'Removed unused {unused_count} change(s), mischeck {mischeck_count}')
 
 
 def main():

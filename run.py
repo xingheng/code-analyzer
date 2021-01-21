@@ -12,7 +12,7 @@ logger = logging.getLogger(__file__)
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
 os.path.exists(OUTPUT_DIR) or os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def run_xcode_build(workspace, scheme, output_dir=None):
+def run_xcode_build(workspace, scheme, output_dir=None, quiet_mode=False, output_handler=None):
     '''
     Run task in a sub-process.
 
@@ -25,13 +25,14 @@ def run_xcode_build(workspace, scheme, output_dir=None):
     fout_path = os.path.join(output_dir or OUTPUT_DIR, f'output-{cur_time}.log')
     foutput = open(fout_path, 'wb')
 
+    quiet = '-quiet' if quiet_mode else ''
     cmd = f'''
         set -euo pipefail
 
         if [ -x "$(command -v xcpretty)" ]; then
-            /usr/bin/xcodebuild -workspace "{workspace}" -scheme "{scheme}" -arch x86_64 clean build | xcpretty
+            /usr/bin/xcodebuild -workspace "{workspace}" -scheme "{scheme}" -arch x86_64 {quiet} clean build | xcpretty
         else
-            /usr/bin/xcodebuild -workspace "{workspace}" -scheme "{scheme}" -arch x86_64 clean build;
+            /usr/bin/xcodebuild -workspace "{workspace}" -scheme "{scheme}" -arch x86_64 {quiet} clean build;
             echo "xcpretty is not installed, suggest to install it and try again.";
         fi
     '''
@@ -59,9 +60,10 @@ def run_xcode_build(workspace, scheme, output_dir=None):
 
         for buffer in read(master):
             foutput.write(buffer)
-            # logger.info(buffer.decode('utf-8'))
-            print(buffer.decode('utf-8', 'ignore'), flush=True, end='')
-            # print('.', end='', flush=True)
+
+            if output_handler:
+                message = buffer.decode('utf-8', 'ignore')
+                output_handler(message)
 
         ret_code = p.poll()
 

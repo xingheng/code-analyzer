@@ -55,12 +55,12 @@ def search_all_classes(project_path):
 
 def get_all_classes(project_path):
     'Return all the unique class names under the project.'
-    all_vcs = list()
+    all_classes = list()
 
     for _, results in search_all_classes(project_path):
-        all_vcs.extend(results)
+        all_classes.extend(results)
 
-    return sorted(list(set(all_vcs)))
+    return sorted(list(set(all_classes)))
 
 
 def is_code_import(content):
