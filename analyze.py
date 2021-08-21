@@ -163,3 +163,14 @@ def generate_header_tree(project_path, root_header):
     root_node = HeaderNode(os.path.basename(root_header), dir=os.path.dirname(root_header))
     analyze_header(root_node, 0)
 
+
+    # Generate tree with graphviz:
+    import pygraphviz as pgv
+
+    tree = pgv.AGraph()
+
+    for node in HeaderNode.all_nodes:
+        if node.source:
+            tree.add_edge(node.source.name, node.name)
+
+    tree.write("output.dot")
