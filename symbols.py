@@ -7,8 +7,6 @@ def search_file_with_regex(regex, filepath):
         content = f.read()
         return re.findall(regex, content, flags=re.M|re.U)
 
-    return []
-
 def search_target_in_project(regex, project_path, flat=True, mapper=None):
     'Search regex in all the source file under the specified project path.'
     for dirpath, filename in find_source_files(project_path):
@@ -94,3 +92,21 @@ def get_all_unused_code_import(project_path):
     for symbol in get_all_view_controllers(project_path):
         for filepath, results in get_unused_symbol_code_import(symbol, project_path):
             yield (symbol, filepath, results)
+
+def get_all_header_imports(header_path):
+
+    headers = []
+    regex = r'#import\s+["<].*\.h[">]'
+
+    with open(header_path, 'r') as f:
+        content = f.read()
+        headers = re.findall(regex, content, flags=re.M|re.U)
+
+    def format(content):
+        units = re.split('"|<|>|/', content)
+        del units[0], units[-1]
+        # print(f'{content} -> {units}')
+        return units[-1]
+
+    headers = list(map(format, headers))
+    return headers

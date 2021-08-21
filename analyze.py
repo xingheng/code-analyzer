@@ -90,4 +90,76 @@ def check_unused_import(project_path):
 
     logger.info(f'Removed unused {unused_count} change(s), mischeck {mischeck_count}')
 
+def generate_header_tree(project_path, root_header):
+    '''
+    Generate the import header tree graph for the project.
+    '''
+
+    class HeaderNode:
+        all_nodes = []
+
+        def __init__(self, name, dir=None, module=None, source=None):
+            self.name = name
+            self.dir = dir
+            self.module = module
+            self.source = source
+            self.import_paths = []
+
+            self.__class__.all_nodes.append(self)
+
+        def __repr__(self):
+            return f'<Node: {self.name} {self.dir or ""} {self.source or ""}>'
+
+        @property
+        def fullpath(self):
+            return os.path.join(self.dir, self.name) if self.dir else None
+
+        @classmethod
+        def find_by_name(cls, name, dir=None):
+            nodes = list(filter(lambda x: x.name == name and (dir is None or x.dir == dir), cls.all_nodes))
+            return nodes[0] if len(nodes) > 0 else None
+
+        @classmethod
+        def get_or_create(cls, name, dir=None):
+            node = cls.find_by_name(name, dir)
+
+            if node:
+                return False, node
+            else:
+                return True, HeaderNode(name, dir=dir)
+
+    for root, name in find_source_files(project_path, extensions=[]):
+        created, node = HeaderNode.get_or_create(name, dir=root)
+
+        if not created:
+            logger.warn(f'Found duplicated header file {name}')
+
+    # logger.debug(f'Headers: \n{HeaderNode.all_nodes}\nIn total: {len(HeaderNode.all_nodes)}')
+
+    def analyze_header(node, depth, source=None):
+        print(f'{"    " * depth}{node.name}')
+        node.analyzed = True
+
+        for header in get_all_header_imports(node.fullpath):
+            created, sub_node = HeaderNode.get_or_create(header)
+            sub_node.source = node
+
+            if created:
+                # Skip the new incoming header files.
+                continue
+
+            if sub_node.fullpath is None:
+                # Skip the external header files.
+                continue
+
+            signature = node.fullpath
+
+            if signature in sub_node.import_paths:
+                continue
+
+            sub_node.import_paths.append(signature)
+            analyze_header(sub_node, depth + 1)
+
+    root_node = HeaderNode(os.path.basename(root_header), dir=os.path.dirname(root_header))
+    analyze_header(root_node, 0)
 
