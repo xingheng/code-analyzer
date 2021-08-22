@@ -105,14 +105,15 @@ def generate_header_tree(project_path, root_header):
             self.source = source
             self.import_paths = []
 
-            self.__class__.all_nodes.append(self)
-
         def __repr__(self):
-            return f'<Node: {self.name} {self.dir or ""} {self.source or ""}>'
+            return f'<Node: {self.name} {self.dir or ""} {self.source and self.source.name or ""}>'
 
         @property
         def fullpath(self):
             return os.path.join(self.dir, self.name) if self.dir else None
+
+        def save(self):
+            self.__class__.all_nodes.append(self)
 
         @classmethod
         def find_by_name(cls, name, dir=None):
@@ -128,15 +129,20 @@ def generate_header_tree(project_path, root_header):
             else:
                 return True, HeaderNode(name, dir=dir)
 
-    for root, name in find_source_files(project_path, extensions=[]):
+    all_headers = find_source_files(project_path, extensions=[], dir_filter=lambda dirname, dirpath: dirname not in ['lib', 'grpc', 'UBC'])
+
+    # First, generate header nodes.
+    for root, name in all_headers:
         created, node = HeaderNode.get_or_create(name, dir=root)
 
-        if not created:
+        if created:
+            node.save()
+        else:
             logger.warn(f'Found duplicated header file {name}')
 
-    # logger.debug(f'Headers: \n{HeaderNode.all_nodes}\nIn total: {len(HeaderNode.all_nodes)}')
+    logger.debug(f'Total headers: {len(HeaderNode.all_nodes)}')
 
-    def analyze_header(node, depth, source=None):
+    def analyze_header(node, depth):
         print(f'{"    " * depth}{node.name}')
         node.analyzed = True
 
@@ -145,6 +151,7 @@ def generate_header_tree(project_path, root_header):
             sub_node.source = node
 
             if created:
+                sub_node.save()
                 # Skip the new incoming header files.
                 continue
 
@@ -152,22 +159,26 @@ def generate_header_tree(project_path, root_header):
                 # Skip the external header files.
                 continue
 
-            signature = node.fullpath
+            path = node.fullpath
 
-            if signature in sub_node.import_paths:
+            if path in sub_node.import_paths:
                 continue
 
-            sub_node.import_paths.append(signature)
+            sub_node.import_paths.append(path)
+            sub_node.save()
+
+            # Third, loop into to build the source relationship.
             analyze_header(sub_node, depth + 1)
 
+    # Second, start scanning from the specified root header.
     root_node = HeaderNode(os.path.basename(root_header), dir=os.path.dirname(root_header))
+    root_node.save()
     analyze_header(root_node, 0)
 
-
-    # Generate tree with graphviz:
+    # Finally, generate tree with graphviz:
     import pygraphviz as pgv
 
-    tree = pgv.AGraph()
+    tree = pgv.AGraph(rankdir='LR')
 
     for node in HeaderNode.all_nodes:
         if node.source:

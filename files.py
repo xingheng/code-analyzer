@@ -24,7 +24,7 @@ def find_directories(dirpath, dir_filter=None):
             continue
         break
 
-def find_source_files(dir, include_headers=True, extensions=None):
+def find_source_files(dir, include_headers=True, extensions=None, dir_filter=None):
     'Return all the source files under the specified directory.'
     expected_exts = extensions if extensions is not None else ['.m', '.mm']
 
@@ -32,7 +32,7 @@ def find_source_files(dir, include_headers=True, extensions=None):
         expected_exts.append('.h')
 
     def directory_filter(dirname, dirpath):
-        return dirname not in ['.git', 'Pods', 'lib', 'grpc']
+        return dirname not in ['.git', 'Pods', 'lib', 'grpc'] and dir_filter(dirname, dirpath)
 
     def file_filter(filename, dirpath):
         _, ext = os.path.splitext(filename)
