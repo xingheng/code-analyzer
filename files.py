@@ -32,7 +32,7 @@ def find_source_files(dir, include_headers=True, extensions=None, dir_filter=Non
         expected_exts.append('.h')
 
     def directory_filter(dirname, dirpath):
-        return dirname not in ['.git', 'Pods', 'lib', 'grpc'] and dir_filter(dirname, dirpath)
+        return dirname not in ['.git', 'Pods', 'lib', 'grpc'] and (dir_filter is None or dir_filter(dirname, dirpath))
 
     def file_filter(filename, dirpath):
         _, ext = os.path.splitext(filename)

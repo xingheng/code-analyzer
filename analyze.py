@@ -90,7 +90,7 @@ def check_unused_import(project_path):
 
     logger.info(f'Removed unused {unused_count} change(s), mischeck {mischeck_count}')
 
-def generate_header_tree(project_path, root_header):
+def generate_header_tree(project_path, root_header, show_raw_graph=True, dotfile=None):
     '''
     Generate the import header tree graph for the project.
     '''
@@ -143,7 +143,9 @@ def generate_header_tree(project_path, root_header):
     logger.debug(f'Total headers: {len(HeaderNode.all_nodes)}')
 
     def analyze_header(node, depth):
-        print(f'{"    " * depth}{node.name}')
+        if show_raw_graph:
+            print(f'{"    " * depth}{node.name}')
+
         node.analyzed = True
 
         for header in get_all_header_imports(node.fullpath):
@@ -176,12 +178,13 @@ def generate_header_tree(project_path, root_header):
     analyze_header(root_node, 0)
 
     # Finally, generate tree with graphviz:
-    import pygraphviz as pgv
+    if dotfile:
+        import pygraphviz as pgv
 
-    tree = pgv.AGraph(rankdir='LR')
+        tree = pgv.AGraph(rankdir='LR')
 
-    for node in HeaderNode.all_nodes:
-        if node.source:
-            tree.add_edge(node.source.name, node.name)
+        for node in HeaderNode.all_nodes:
+            if node.source:
+                tree.add_edge(node.source.name, node.name)
 
-    tree.write("output.dot")
+        tree.write(dotfile)
