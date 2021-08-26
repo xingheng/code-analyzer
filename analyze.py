@@ -3,7 +3,7 @@ from symbols import *
 from run import *
 
 import logging
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 def check_unused_import(project_path):
     '''

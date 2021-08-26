@@ -3,6 +3,7 @@
 import logging, logging.config, coloredlogs
 import os.path
 import click
+from dotenv import load_dotenv
 from symbols import *
 from analyze import *
 
@@ -35,16 +36,25 @@ LOGGING_CONFIG = {
             'class': 'logging.StreamHandler',
             'formatter': 'colored',
             'stream': 'ext://sys.stdout'
+        },
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'formatter': 'standard',
+            'filename': 'logs/main.log',
+            'backupCount': 10,
+            'when': 'midnight',
+            'interval': 1,
         }
     },
     'loggers': {
         '': {  # root logger
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False
         },
         '__main__': {  # if __name__ == '__main__'
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG',
             'propagate': False
         }
@@ -122,4 +132,5 @@ def generate_header_graph(ctx, project, entry, raw_result, dot_file):
 
 
 if __name__ == '__main__':
+    load_dotenv()
     cli()
