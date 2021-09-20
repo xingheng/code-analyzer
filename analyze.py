@@ -99,11 +99,11 @@ def generate_header_tree(project_path, root_header, show_raw_graph=True, dotfile
         all_nodes = []
 
         def __init__(self, name, dir=None, module=None, source=None):
-            self.name = name
-            self.dir = dir
-            self.module = module
-            self.source = source
-            self.import_paths = []
+            self.name = name        # header filename.
+            self.dir = dir          # header file's parent path.
+            self.module = module    # framework name if exists.
+            self.source = source    # reference header file path.
+            self.import_paths = []  # all the headers imported in current header.
 
         def __repr__(self):
             return f'<Node: {self.name} {self.dir or ""} {self.source and self.source.name or ""}>'
@@ -142,7 +142,11 @@ def generate_header_tree(project_path, root_header, show_raw_graph=True, dotfile
 
     logger.debug(f'Total headers: {len(HeaderNode.all_nodes)}')
 
-    def analyze_header(node, depth):
+    if dotfile:
+        import pygraphviz as pgv
+        tree = pgv.AGraph(rankdir='LR')
+
+    def analyze_header(node, depth=0):
         if show_raw_graph:
             print(f'{"    " * depth}{node.name}')
 
@@ -169,22 +173,17 @@ def generate_header_tree(project_path, root_header, show_raw_graph=True, dotfile
             sub_node.import_paths.append(path)
             sub_node.save()
 
+            if dotfile:
+                tree.add_edge(node.name, sub_node.name)
+
             # Third, loop into to build the source relationship.
             analyze_header(sub_node, depth + 1)
 
     # Second, start scanning from the specified root header.
     root_node = HeaderNode(os.path.basename(root_header), dir=os.path.dirname(root_header))
     root_node.save()
-    analyze_header(root_node, 0)
+    analyze_header(root_node)
 
-    # Finally, generate tree with graphviz:
+    # Finally, generate tree with graphviz if necessary.
     if dotfile:
-        import pygraphviz as pgv
-
-        tree = pgv.AGraph(rankdir='LR')
-
-        for node in HeaderNode.all_nodes:
-            if node.source:
-                tree.add_edge(node.source.name, node.name)
-
         tree.write(dotfile)
