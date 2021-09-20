@@ -96,7 +96,7 @@ def get_all_unused_code_import(project_path):
 def get_all_header_imports(header_path):
 
     headers = []
-    regex = r'#import\s+["<].*\.h[">]'
+    regex = r'^\s*#import\s+["<].*\.h[">]'
 
     with open(header_path, 'r') as f:
         content = f.read()
